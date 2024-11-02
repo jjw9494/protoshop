@@ -1,10 +1,19 @@
+// page.tsx
 "use client";
 import { Separator } from "@/components/ui/separator";
 import { CustomFileInput } from "./custom-hooks/CustomFileInput";
 import { Slider } from "@/components/ui/slider";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
-import { adjustImageBrightness } from "../wasm_functions/brightness/brightnessWrapper";
+import {
+	adjustBlacks,
+	adjustBrightness,
+	adjustContrast,
+	adjustExposure,
+	adjustHighlights,
+	adjustShadows,
+	adjustWhites,
+} from "../wasm_functions/function_wrappers";
 import localFont from "next/font/local";
 import {
 	Menubar,
@@ -14,16 +23,42 @@ import {
 	MenubarSeparator,
 	MenubarTrigger,
 } from "@/components/ui/menubar";
+import { debounce } from "lodash";
 
 const headerBold = localFont({
 	src: "./fonts/PPNeueBit-Bold.otf",
 });
 
+interface AdjustmentValues {
+	brightness: number;
+	exposure: number;
+	contrast: number;
+	highlight: number;
+	shadow: number;
+	black: number;
+	white: number;
+}
+
+const defaultAdjustments: AdjustmentValues = {
+	brightness: 1,
+	exposure: 1,
+	contrast: 1,
+	highlight: 1,
+	shadow: 1,
+	black: 1,
+	white: 1,
+};
+
 export default function Home() {
 	const [imageFile, setImageFile] = useState<File | null>(null);
-	const [brightness, setBrightness] = useState(1);
+	const [adjustments, setAdjustments] =
+		useState<AdjustmentValues>(defaultAdjustments);
+	const [isProcessing, setIsProcessing] = useState(false);
+
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const originalImageData = useRef<ImageData | null>(null);
+	const currentImageData = useRef<ImageData | null>(null);
+	const pendingAdjustments = useRef<AdjustmentValues>(defaultAdjustments);
 
 	useEffect(() => {
 		if (imageFile && canvasRef.current) {
@@ -44,8 +79,12 @@ export default function Home() {
 					canvas.width,
 					canvas.height
 				);
-
-				updateBrightness(brightness);
+				currentImageData.current = ctx.getImageData(
+					0,
+					0,
+					canvas.width,
+					canvas.height
+				);
 			};
 			img.src = URL.createObjectURL(imageFile);
 
@@ -55,22 +94,100 @@ export default function Home() {
 		}
 	}, [imageFile]);
 
-	const updateBrightness = async (value: number) => {
-		if (!canvasRef.current || !originalImageData.current) return;
+	const processAdjustment = async (
+		adjustmentFn: Function,
+		value: number,
+		imageData: ImageData
+	) => {
+		if (value === 1) return imageData; 
+		return await adjustmentFn(imageData, value);
+	};
+
+	const applyAdjustments = async (newAdjustments: AdjustmentValues) => {
+		if (!canvasRef.current || !originalImageData.current || isProcessing)
+			return;
 
 		const ctx = canvasRef.current.getContext("2d");
 		if (!ctx) return;
 
+		setIsProcessing(true);
+
 		try {
-			const processedImageData = await adjustImageBrightness(
-				originalImageData.current,
-				value
-			);
-			ctx.putImageData(processedImageData, 0, 0);
+			let processedData = originalImageData.current;
+
+			if (newAdjustments.brightness !== 1) {
+				processedData = await processAdjustment(
+					adjustBrightness,
+					newAdjustments.brightness,
+					processedData
+				);
+			}
+			if (newAdjustments.exposure !== 1) {
+				processedData = await processAdjustment(
+					adjustExposure,
+					newAdjustments.exposure,
+					processedData
+				);
+			}
+			if (newAdjustments.contrast !== 1) {
+				processedData = await processAdjustment(
+					adjustContrast,
+					newAdjustments.contrast,
+					processedData
+				);
+			}
+			if (newAdjustments.highlight !== 1) {
+				processedData = await processAdjustment(
+					adjustHighlights,
+					newAdjustments.highlight,
+					processedData
+				);
+			}
+			if (newAdjustments.shadow !== 1) {
+				processedData = await processAdjustment(
+					adjustShadows,
+					newAdjustments.shadow,
+					processedData
+				);
+			}
+			if (newAdjustments.black !== 1) {
+				processedData = await processAdjustment(
+					adjustBlacks,
+					newAdjustments.black,
+					processedData
+				);
+			}
+			if (newAdjustments.white !== 1) {
+				processedData = await processAdjustment(
+					adjustWhites,
+					newAdjustments.white,
+					processedData
+				);
+			}
+
+			currentImageData.current = processedData;
+			ctx.putImageData(processedData, 0, 0);
 		} catch (error) {
 			console.error("Error processing image:", error);
+		} finally {
+			setIsProcessing(false);
 		}
 	};
+
+	
+	const debouncedApplyAdjustments = useMemo(
+		() => debounce(applyAdjustments, 50),
+		[]
+	);
+
+	useEffect(() => {
+		if (imageFile) {
+			debouncedApplyAdjustments(adjustments);
+		}
+		return () => {
+			debouncedApplyAdjustments.cancel();
+		};
+	}, [adjustments, imageFile]);
 
 	const handleDownload = () => {
 		if (!canvasRef.current) return;
@@ -103,8 +220,9 @@ export default function Home() {
 			</div>
 			<Separator orientation="vertical" className="bg-zinc-800" />
 			<Tools
-				setBrightness={setBrightness}
-				updateBrightness={updateBrightness}
+				adjustments={adjustments}
+				setAdjustments={setAdjustments}
+				isProcessing={isProcessing}
 			/>
 		</main>
 	);
@@ -149,91 +267,95 @@ function Nav({
 	);
 }
 
-function Tools({
-	setBrightness,
-	updateBrightness,
-}: {
-	setBrightness: (value: number) => void;
-	updateBrightness: (value: number) => void;
-}) {
-	const handleBrightnessChange = (value: number[]) => {
-		const newBrightness = value[0] / 50;
-		setBrightness(newBrightness);
-		updateBrightness(newBrightness);
+interface ToolsProps {
+	adjustments: AdjustmentValues;
+	setAdjustments: React.Dispatch<React.SetStateAction<AdjustmentValues>>;
+	isProcessing: boolean;
+}
+
+function Tools({ adjustments, setAdjustments, isProcessing }: ToolsProps) {
+	const [sliderValues, setSliderValues] = useState({
+		brightness: 50,
+		exposure: 50,
+		contrast: 50,
+		highlight: 50,
+		shadow: 50,
+		black: 50,
+		white: 50,
+	});
+
+	const handleSliderChange = (
+		name: keyof AdjustmentValues,
+		value: number[]
+	) => {
+		const newValue = value[0];
+		setSliderValues((prev) => ({ ...prev, [name]: newValue }));
+
+		let adjustmentValue: number;
+
+		// Values for slider are wrong, need to sort, some should start at 0 I think
+		switch (name) {
+			case "brightness":
+			case "exposure":
+				adjustmentValue = newValue / 50; // Range: 0.5 to 2
+				break;
+			case "contrast":
+			case "highlight":
+				adjustmentValue = newValue / 50; // Range: 0 to 2
+				break;
+			case "shadow":
+			case "black":
+			case "white":
+				adjustmentValue = (newValue - 50) / 50; // Range: -1 to 1
+				break;
+			default:
+				adjustmentValue = newValue / 50; // Fallback
+		}
+
+		setAdjustments((prev) => ({
+			...prev,
+			[name]: adjustmentValue,
+		}));
 	};
-	const [brightnessVal, setBrightnessVal] = useState<number>(50);
-	const [contrastVal, setContrastVal] = useState<number>(50);
-	const [saturationVal, setSaturationVal] = useState<number>(50);
-
-	function handleBrightness(e: React.ChangeEvent<HTMLInputElement>) {
-		const value = Number(e);
-		setBrightnessVal(value);
-		handleBrightnessChange([value]);
-	}
-
-	function handleContrast(e: React.ChangeEvent<HTMLInputElement>) {
-		setContrastVal(Number(e.target.value));
-	}
-
-	function handleSaturation(e: React.ChangeEvent<HTMLInputElement>) {
-		setSaturationVal(Number(e.target.value));
-	}
 
 	return (
 		<aside className="w-[100%] md:w-[20%] md:h-screen bg-zinc-950">
 			<Separator orientation="horizontal" className="bg-zinc-800" />
 			<div className="w-full h-[93%] flex gap-8 flex-col p-8">
-				<div className="flex flex-col gap-4">
-					<div className="flex flex-row justify-between mt-4">
-						<label className={`${headerBold.className} text-2xl text-white`}>
-							Brightness
-						</label>
-						<p className={`${headerBold.className} text-2xl text-white`}>
-							{brightnessVal}
-						</p>
+				{[
+					{ name: "brightness", label: "Brightness" },
+					{ name: "exposure", label: "Exposure" },
+					{ name: "contrast", label: "Contrast" },
+					{ name: "highlight", label: "Highlights" },
+					{ name: "shadow", label: "Shadows" },
+					{ name: "black", label: "Blacks" },
+					{ name: "white", label: "Whites" },
+				].map(({ name, label }) => (
+					<div key={name} className="flex flex-col gap-4">
+						<div className="flex flex-row justify-between">
+							<label className={`${headerBold.className} text-2xl text-white`}>
+								{label}
+							</label>
+							<p className={`${headerBold.className} text-2xl text-white`}>
+								{name === "shadow" || name === "black" || name === "white"
+									? sliderValues[name as keyof typeof sliderValues] - 50
+									: (sliderValues[name as keyof typeof sliderValues] * 2 -
+											100) /
+									  100}
+							</p>
+						</div>
+						<Slider
+							defaultValue={[50]}
+							max={100}
+							step={1}
+							value={[sliderValues[name as keyof typeof sliderValues]]}
+							onValueChange={(e) =>
+								handleSliderChange(name as keyof AdjustmentValues, e)
+							}
+							disabled={isProcessing}
+						/>
 					</div>
-
-					<Slider
-						defaultValue={[50]}
-						max={100}
-						step={1}
-						onValueChange={(e) => handleBrightness(e)}
-					/>
-				</div>
-				<div className="flex flex-col gap-4">
-					<div className="flex flex-row justify-between">
-						<label className={`${headerBold.className} text-2xl text-white`}>
-							Contrast
-						</label>
-						<p className={`${headerBold.className} text-2xl text-white`}>
-							{contrastVal}
-						</p>
-					</div>
-
-					<Slider
-						defaultValue={[50]}
-						max={100}
-						step={1}
-						onValueChange={(e) => handleContrast(e)}
-					/>
-				</div>
-				<div className="flex flex-col gap-4">
-					<div className="flex flex-row justify-between">
-						<label className={`${headerBold.className} text-2xl text-white`}>
-							Saturation
-						</label>
-						<p className={`${headerBold.className} text-2xl text-white`}>
-							{saturationVal}
-						</p>
-					</div>
-
-					<Slider
-						defaultValue={[50]}
-						max={100}
-						step={1}
-						onValueChange={(e) => handleSaturation(e)}
-					/>
-				</div>
+				))}
 			</div>
 		</aside>
 	);
