@@ -1,4 +1,3 @@
-// function_wrappers.ts
 interface EmscriptenModuleWithCCall {
 	ccall: (
 		funcName: string,
@@ -24,7 +23,6 @@ async function loadModule(): Promise<EmscriptenModuleWithCCall> {
 	return moduleInstance;
 }
 
-// Generic function to handle image processing
 async function processImage(
 	imageData: ImageData,
 	functionName: string,
@@ -63,7 +61,6 @@ async function processImage(
 	}
 }
 
-// Export individual adjustment functions
 export async function adjustBrightness(
 	imageData: ImageData,
 	amount: number
@@ -113,42 +110,98 @@ export async function adjustBlacks(
 	return processImage(imageData, "adjustBlacks", amount);
 }
 
-// Helper function to apply multiple adjustments at once for better performance
-export async function applyMultipleAdjustments(
-	imageData: ImageData,
-	adjustments: {
-		brightness?: number;
-		exposure?: number;
-		contrast?: number;
-		highlights?: number;
-		shadows?: number;
-		whites?: number;
-		blacks?: number;
-	}
+export async function adjustTemperature(
+    imageData: ImageData,
+    amount: number
 ): Promise<ImageData> {
-	let result = imageData;
+    return processImage(imageData, "adjustTemperatureEffect", amount);
+}
 
-	if (adjustments.exposure !== undefined) {
-		result = await adjustExposure(result, adjustments.exposure);
-	}
-	if (adjustments.contrast !== undefined) {
-		result = await adjustContrast(result, adjustments.contrast);
-	}
-	if (adjustments.highlights !== undefined) {
-		result = await adjustHighlights(result, adjustments.highlights);
-	}
-	if (adjustments.shadows !== undefined) {
-		result = await adjustShadows(result, adjustments.shadows);
-	}
-	if (adjustments.whites !== undefined) {
-		result = await adjustWhites(result, adjustments.whites);
-	}
-	if (adjustments.blacks !== undefined) {
-		result = await adjustBlacks(result, adjustments.blacks);
-	}
-	if (adjustments.brightness !== undefined) {
-		result = await adjustBrightness(result, adjustments.brightness);
-	}
+export async function adjustTint(
+    imageData: ImageData,
+    amount: number
+): Promise<ImageData> {
+    return processImage(imageData, "adjustTintEffect", amount);
+}
 
-	return result;
+export async function adjustVibrance(
+    imageData: ImageData,
+    amount: number
+): Promise<ImageData> {
+    return processImage(imageData, "adjustVibranceEffect", amount);
+}
+
+export async function adjustSaturation(
+    imageData: ImageData,
+    amount: number
+): Promise<ImageData> {
+    return processImage(imageData, "adjustSaturationEffect", amount);
+}
+
+export async function adjustSharpness(
+    imageData: ImageData,
+    amount: number
+): Promise<ImageData> {
+    return processImage(imageData, "adjustSharpnessEffect", amount);
+}
+
+export async function adjustVignette(
+    imageData: ImageData,
+    amount: number
+): Promise<ImageData> {
+    return processImage(imageData, "adjustVignetteEffect", amount);
+}
+
+export async function addGrain(
+	imageData: ImageData,
+	amount: number
+): Promise<ImageData> {
+	return processImage(imageData, "addGrain", amount);
+}
+
+export async function generateHistogram(
+	imageData: ImageData
+): Promise<{ r: number[]; g: number[]; b: number[] }> {
+	const module = await loadModule();
+
+	const numPixels = imageData.width * imageData.height;
+	const byteSize = numPixels * 4;
+
+	// Allocate memory for the image data and histogram arrays
+	const imagePtr = module._EMSCRIPTEN_MALLOC(byteSize);
+	const histRPtr = module._EMSCRIPTEN_MALLOC(256 * 4);
+	const histGPtr = module._EMSCRIPTEN_MALLOC(256 * 4);
+	const histBPtr = module._EMSCRIPTEN_MALLOC(256 * 4);
+
+	try {
+		// Copy image data to WASM memory
+		module.HEAPU8.set(new Uint8Array(imageData.data.buffer), imagePtr);
+
+		// Call the C function
+		module.ccall(
+			"generateHistogram",
+			"void",
+			["number", "number", "number", "number", "number"],
+			[imagePtr, numPixels, histRPtr, histGPtr, histBPtr]
+		);
+
+		// Create arrays to store the histogram data
+		const histR = Array.from(
+			new Int32Array(module.HEAPU8.buffer, histRPtr, 256)
+		);
+		const histG = Array.from(
+			new Int32Array(module.HEAPU8.buffer, histGPtr, 256)
+		);
+		const histB = Array.from(
+			new Int32Array(module.HEAPU8.buffer, histBPtr, 256)
+		);
+
+		return { r: histR, g: histG, b: histB };
+	} finally {
+		// Free allocated memory
+		module._EMSCRIPTEN_FREE(imagePtr);
+		module._EMSCRIPTEN_FREE(histRPtr);
+		module._EMSCRIPTEN_FREE(histGPtr);
+		module._EMSCRIPTEN_FREE(histBPtr);
+	}
 }
