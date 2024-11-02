@@ -265,18 +265,20 @@ export default function Home() {
 		}
 	};
 
-	const debouncedApplyAdjustments = useMemo(
-		() => debounce(applyAdjustments, 50),
-		[]
-	);
+	// Originally tried debouncing for smoother sliders but not sure whether it's better, trying without...
+	// const debouncedApplyAdjustments = useMemo(
+	// 	() => debounce(applyAdjustments, 50),
+	// 	[]
+	// );
 
 	useEffect(() => {
 		if (imageFile) {
-			debouncedApplyAdjustments(adjustments);
+			// debouncedApplyAdjustments(adjustments);
+			applyAdjustments(adjustments)
 		}
-		return () => {
-			debouncedApplyAdjustments.cancel();
-		};
+		// return () => {
+		// 	debouncedApplyAdjustments.cancel();
+		// };
 	}, [adjustments, imageFile]);
 
 	const handleDownload = () => {
