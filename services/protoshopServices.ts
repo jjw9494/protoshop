@@ -249,7 +249,7 @@ export async function moveFile(objId: string, destinationId: string) {
 
 export async function signOut() {
 	const url =
-		"https://us-east-1fzoyjj6v8.auth.us-east-1.amazoncognito.com/logout?client_id=42ofhk29neqi1c714b9n7ncvi5&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2F";
+		"https://us-east-1fzoyjj6v8.auth.us-east-1.amazoncognito.com/logout?client_id=42ofhk29neqi1c714b9n7ncvi5&redirect_uri=https%3A%2F%2Fprotoshop.vercel.app%2F";
 
 	try {
 		let response = await fetch(url, {

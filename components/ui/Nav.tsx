@@ -72,7 +72,7 @@ export default function Nav({
 						) : (
 							<MenubarContent className="bg-zinc-950 border-none text-white">
 								<MenubarItem asChild>
-									<a href="https://us-east-1fzoyjj6v8.auth.us-east-1.amazoncognito.com/login/continue?client_id=42ofhk29neqi1c714b9n7ncvi5&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2F&response_type=code&scope=email+openid+phone">
+									<a href="https://us-east-1fzoyjj6v8.auth.us-east-1.amazoncognito.com/login/continue?client_id=42ofhk29neqi1c714b9n7ncvi5&redirect_uri=https%3A%2F%2Fprotoshop.vercel.app%2F&response_type=code&scope=email+openid+phone">
 										Log In
 									</a>
 								</MenubarItem>
