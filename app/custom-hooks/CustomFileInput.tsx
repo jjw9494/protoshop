@@ -6,7 +6,7 @@ import Image from "next/image";
 import localFont from "next/font/local";
 
 const headerBold = localFont({
-	src: "../fonts/PPNeueBit-Bold.otf",
+	src: "../../public/fonts/PPNeueBit-Bold.otf",
 });
 
 export function CustomFileInput({

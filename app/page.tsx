@@ -1,11 +1,7 @@
 "use client";
 import { Separator } from "@/components/ui/separator";
 import { CustomFileInput } from "./custom-hooks/CustomFileInput";
-import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState, useRef, useEffect, useMemo } from "react";
-import Image from "next/image";
 import {
 	generateHistogram,
 	adjustBlacks,
@@ -24,37 +20,39 @@ import {
 	adjustSharpness,
 } from "../wasm_functions/function_wrappers";
 import localFont from "next/font/local";
-import {
-	Menubar,
-	MenubarContent,
-	MenubarItem,
-	MenubarMenu,
-	MenubarSeparator,
-	MenubarTrigger,
-} from "@/components/ui/menubar";
 import { debounce } from "lodash";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { Button } from "@/components/ui/button";
+import { useSearchParams } from "next/navigation";
+import {
+	generateAccessToken,
+	getFileContent,
+} from "@/services/protoshopServices";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogPortal,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { v4 as uuidv4 } from "uuid";
+import { addFile, addS3File } from "@/services/protoshopServices";
+import { toast } from "sonner";
+import Nav from "@/components/ui/Nav";
+import {
+	AdjustmentValues,
+	HistogramData,
+	AdjustmentFunction,
+} from "@/interfaces/HomeInterfaces";
+import Tools from "@/components/ui/Tools";
+import SaveMenu from "@/components/ui/SaveMenu";
+import OpenMenu from "@/components/ui/OpenMenu";
 
 const headerBold = localFont({
-	src: "./fonts/PPNeueBit-Bold.otf",
+	src: "../public/fonts/PPNeueBit-Bold.otf",
 });
-
-interface AdjustmentValues {
-	brightness: number;
-	exposure: number;
-	contrast: number;
-	highlight: number;
-	shadow: number;
-	black: number;
-	white: number;
-	temperature: number;
-	tint: number;
-	vibrance: number;
-	saturation: number;
-	grain: number;
-	vignette: number;
-	sharpness: number;
-}
 
 const defaultAdjustments: AdjustmentValues = {
 	brightness: 1,
@@ -73,25 +71,68 @@ const defaultAdjustments: AdjustmentValues = {
 	sharpness: 0,
 };
 
-interface HistogramData {
-	r: number[];
-	g: number[];
-	b: number[];
-}
+const defaultSliderValues: AdjustmentValues = {
+	brightness: 50,
+	exposure: 50,
+	contrast: 50,
+	highlight: 50,
+	shadow: 50,
+	black: 50,
+	white: 50,
+	temperature: 50,
+	tint: 50,
+	vibrance: 50,
+	saturation: 50,
+	grain: 0,
+	vignette: 0,
+	sharpness: 0,
+};
 
 export default function Home() {
+	const [loggedIn, setLoggedIn] = useState(false);
+	const [username, setUsername] = useState<string>();
+
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [adjustments, setAdjustments] =
 		useState<AdjustmentValues>(defaultAdjustments);
+	const [sliderValues, setSliderValues] = useState(defaultSliderValues);
 	const [isProcessing, setIsProcessing] = useState(false);
 	const [histogramData, setHistogramData] = useState<HistogramData | null>(
 		null
 	);
 
+	const [explorerData, setExplorerData] = useState<any>();
+
+	const [openItemDestination, setOpenItemDestination] = useState();
+	const [openMenuOpen, setOpenMenuOpen] = useState(false);
+
+	const [saveMenuOpen, setSaveMenuOpen] = useState(false);
+	const [saveItemDestination, setSaveItemDestination] = useState();
+	const [saveItemTextInput, setSaveItemTextInput] = useState();
+	const searchParams = useSearchParams();
+
+	// Login and get user information
+	useEffect(() => {
+		const authCode = searchParams.get("code");
+		const getData = async () => {
+			const response = await generateAccessToken(authCode);
+			if (response) {
+				console.log(response);
+				setLoggedIn(true);
+				setUsername(response.username);
+				setExplorerData(response.directory[0]);
+			}
+		};
+		getData();
+	}, [searchParams]);
+
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const originalImageData = useRef<ImageData | null>(null);
 	const currentImageData = useRef<ImageData | null>(null);
 
+	useEffect(() => {});
+
+	// Create Image component and apply histogram function
 	useEffect(() => {
 		if (imageFile && canvasRef.current) {
 			const canvas = canvasRef.current;
@@ -129,10 +170,8 @@ export default function Home() {
 		}
 	}, [imageFile]);
 
-	type AdjustmentFunction = (imageData: ImageData, value: number) => Promise<ImageData>;
-
 	const processAdjustment = async (
-		adjustmentFn: AdjustmentFunction, 
+		adjustmentFn: AdjustmentFunction,
 		value: number,
 		imageData: ImageData
 	) => {
@@ -140,6 +179,7 @@ export default function Home() {
 		return await adjustmentFn(imageData, value);
 	};
 
+	// Apply image filtering effects and update histogram
 	const applyAdjustments = async (newAdjustments: AdjustmentValues) => {
 		if (!canvasRef.current || !originalImageData.current || isProcessing)
 			return;
@@ -265,35 +305,254 @@ export default function Home() {
 		}
 	};
 
-	// Originally tried debouncing for smoother sliders but not sure whether it's better, trying without...
-	// const debouncedApplyAdjustments = useMemo(
-	// 	() => debounce(applyAdjustments, 50),
-	// 	[]
-	// );
+	// Debounce adjustment function to limit processing rate
+	const debouncedApplyAdjustments = useMemo(
+		() => debounce(applyAdjustments, 50),
+		[]
+	);
 
 	useEffect(() => {
 		if (imageFile) {
-			// debouncedApplyAdjustments(adjustments);
-			applyAdjustments(adjustments)
+			debouncedApplyAdjustments(adjustments);
 		}
-		// return () => {
-		// 	debouncedApplyAdjustments.cancel();
-		// };
+		return () => {
+			debouncedApplyAdjustments.cancel();
+		};
 	}, [adjustments, imageFile]);
 
 	const handleDownload = () => {
 		if (!canvasRef.current) return;
 
+		const fileInfo = explorerData?.objChildren?.find(
+			(child: any) => child.objId === openItemDestination
+		);
+
 		const link = document.createElement("a");
-		link.download = "edited-image.png";
+		link.download = fileInfo.name;
 		link.href = canvasRef.current.toDataURL();
 		link.click();
+	};
+
+	const handleClearFile = () => {
+		setImageFile(null);
+		setAdjustments(defaultAdjustments);
+		setSliderValues({
+			brightness: 50,
+			exposure: 50,
+			contrast: 50,
+			highlight: 50,
+			shadow: 50,
+			black: 50,
+			white: 50,
+			temperature: 50,
+			tint: 50,
+			vibrance: 50,
+			saturation: 50,
+			grain: 0,
+			vignette: 0,
+			sharpness: 0,
+		});
+	};
+
+	const handleSaveFile = async () => {
+		// First check if we have an open file
+		if (!canvasRef.current || !openItemDestination) {
+			toast("Error", {
+				description: "No file is currently open for saving",
+			});
+			return;
+		}
+
+		try {
+			// Find the current file info from explorer data
+			const fileInfo = explorerData?.objChildren?.find(
+				(child: any) => child.objId === openItemDestination
+			);
+
+			if (!fileInfo) {
+				throw new Error("Cannot find current file information");
+			}
+
+			// Get the file extension
+			const fileExtension = getFileExtension(imageFile);
+
+			// Convert canvas to File object
+			const fileToUpload = await canvasToFile(
+				canvasRef.current,
+				fileInfo.name,
+				fileExtension
+			);
+
+			// Create form data for upload
+			const formData = new FormData();
+			formData.append("FileId", openItemDestination);
+			formData.append("FileContent", fileToUpload);
+
+			// Upload the file content
+			await addS3File(formData);
+
+			toast("Success", {
+				description: "File saved successfully",
+			});
+		} catch (error) {
+			console.error("Error saving file:", error);
+			toast("Error", {
+				description: "Failed to save file",
+			});
+		}
+	};
+
+	const handleOpenFile = async () => {
+		if (!openItemDestination) {
+			toast("Error", {
+				description: "Please select a file to open",
+			});
+			return;
+		}
+
+		try {
+			// Get the file blob using the new endpoint
+			const fileBlob = await getFileContent(openItemDestination);
+
+			if (!fileBlob) {
+				throw new Error("Failed to get file");
+			}
+
+			// Create a File object from the blob
+			const fileInfo = explorerData?.objChildren?.find(
+				(child: any) => child.objId === openItemDestination
+			);
+			const filename = fileInfo?.name || "opened-file.png";
+
+			const file = new File([fileBlob], filename, { type: fileBlob.type });
+
+			// Reset all adjustments to default values
+			setAdjustments(defaultAdjustments);
+			setSliderValues({
+				brightness: 50,
+				exposure: 50,
+				contrast: 50,
+				highlight: 50,
+				shadow: 50,
+				black: 50,
+				white: 50,
+				temperature: 50,
+				tint: 50,
+				vibrance: 50,
+				saturation: 50,
+				grain: 0,
+				vignette: 0,
+				sharpness: 0,
+			});
+
+			// Set the new image file
+			setImageFile(file);
+
+			toast("Success", {
+				description: "File opened successfully",
+			});
+		} catch (error) {
+			console.error("Error opening file:", error);
+			toast("Error", {
+				description: "Failed to open file",
+			});
+		} finally {
+			setOpenMenuOpen(false);
+		}
+	};
+
+	const getFileExtension = (file: File | null): string => {
+		if (!file) return "png"; // Default to png if no original file
+		const filename = file.name;
+		const ext = filename.slice(((filename.lastIndexOf(".") - 1) >>> 0) + 2);
+		return ext.toLowerCase();
+	};
+
+	const canvasToFile = async (
+		canvas: HTMLCanvasElement,
+		filename: string,
+		type: string
+	): Promise<File> => {
+		return new Promise((resolve, reject) => {
+			canvas.toBlob((blob) => {
+				if (blob) {
+					const file = new File([blob], filename, { type: `image/${type}` });
+					resolve(file);
+				} else {
+					reject(new Error("Failed to convert canvas to blob"));
+				}
+			}, `image/${type}`);
+		});
+	};
+
+	const handleSaveNewFile = async () => {
+		if (!canvasRef.current || !saveItemTextInput || !saveItemDestination) {
+			toast("Error", {
+				description: "Missing required information for saving",
+			});
+			return;
+		}
+
+		try {
+			// Generate UUID for the new file
+			const uuid = uuidv4();
+
+			// Get the file extension from the original file or default to png
+			const fileExtension = getFileExtension(imageFile);
+
+			// Create the full filename with extension
+			const fullFilename = `${saveItemTextInput}.${fileExtension}`;
+
+			// Convert canvas to File object
+			const fileToUpload = await canvasToFile(
+				canvasRef.current,
+				fullFilename,
+				fileExtension
+			);
+
+			// First, create the file entry in your system
+			const response = await addFile(uuid, fullFilename, saveItemDestination);
+
+			if (response) {
+				// If file entry is created, upload the actual file content
+				const formData = new FormData();
+				formData.append("FileId", uuid);
+				formData.append("FileContent", fileToUpload);
+
+				await addS3File(formData);
+
+				// Update explorer data with the new file
+				setExplorerData(response.directory[0]);
+
+				toast("Success", {
+					description: "File saved successfully",
+				});
+			} else {
+				throw new Error("Failed to save file");
+			}
+		} catch (error) {
+			console.error("Error saving file:", error);
+			toast("Error", {
+				description: "Failed to save file",
+			});
+		} finally {
+			setSaveMenuOpen(false);
+		}
 	};
 
 	return (
 		<main className="md:h-screen h-full w-screen flex flex-col md:flex-row bg-zinc-900 md:overflow-y-hidden">
 			<div className="flex flex-col w-[100%] md:w-[80%] h-full md:h-screen">
-				<Nav setImageFile={setImageFile} handleDownload={handleDownload} />
+				<Nav
+					setImageFile={setImageFile}
+					handleDownload={handleDownload}
+					loggedIn={loggedIn}
+					username={username}
+					setSaveMenuOpen={setSaveMenuOpen}
+					setOpenMenuOpen={setOpenMenuOpen}
+					handleSaveFile={handleSaveFile}
+					handleClearFile={handleClearFile}
+				/>
 				<Separator orientation="horizontal" className="bg-zinc-800" />
 				<div className="md:h-[99%] max-h-[60%] md:max-h-[100%] flex flex-col items-center justify-center gap-4">
 					{imageFile ? (
@@ -352,239 +611,81 @@ export default function Home() {
 				adjustments={adjustments}
 				setAdjustments={setAdjustments}
 				isProcessing={isProcessing}
+				sliderValues={sliderValues}
+				setSliderValues={setSliderValues}
 			/>
+			{saveMenuOpen && (
+				<Dialog open={saveMenuOpen} onOpenChange={setSaveMenuOpen}>
+					<DialogPortal>
+						<DialogContent
+							className="flex flex-col max-h-[80%] max-w-[80%] min-w-[80%] min-h-[80%] fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
+							style={{ borderRadius: "6px" }}
+						>
+							<DialogHeader className="max-h-[10px] h-[10px]">
+								<DialogTitle>Save</DialogTitle>
+							</DialogHeader>
+							<div className="h-[87%] w-full max-h-[87%] min-h-[87%] overflow-auto mt-4">
+								<SaveMenu
+									explorerData={explorerData}
+									saveItemDestination={saveItemDestination}
+									setSaveItemDestination={setSaveItemDestination}
+								/>
+							</div>
+							<DialogFooter className="fixed right-10 bottom-8 gap-6 w-[80%]">
+								<Input
+									placeholder="File Name"
+									className="w-[100%] self-start rounded  bg-zinc-800"
+									value={saveItemTextInput}
+									onChange={(e: any) => setSaveItemTextInput(e.target.value)}
+								></Input>
+								<Button
+									variant="outline"
+									className="rounded"
+									onClick={() => setSaveMenuOpen(false)}
+								>
+									Cancel
+								</Button>
+								<Button onClick={() => handleSaveNewFile()} className="rounded">
+									Save
+								</Button>
+							</DialogFooter>
+						</DialogContent>
+					</DialogPortal>
+				</Dialog>
+			)}
+			{openMenuOpen && (
+				<Dialog open={openMenuOpen} onOpenChange={setOpenMenuOpen}>
+					<DialogPortal>
+						<DialogContent
+							className="flex flex-col max-h-[80%] max-w-[80%] min-w-[80%] min-h-[80%] fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
+							style={{ borderRadius: "6px" }}
+						>
+							<DialogHeader className="max-h-[10px] h-[10px]">
+								<DialogTitle>Open</DialogTitle>
+							</DialogHeader>
+							<div className="h-[87%] w-full max-h-[87%] min-h-[87%] overflow-auto mt-4">
+								<OpenMenu
+									explorerData={explorerData}
+									openItemDestination={openItemDestination}
+									setOpenItemDestination={setOpenItemDestination}
+								/>
+							</div>
+							<DialogFooter className="fixed right-10 bottom-8">
+								<Button
+									variant="outline"
+									className="rounded"
+									onClick={() => setOpenMenuOpen(false)}
+								>
+									Cancel
+								</Button>
+								<Button onClick={() => handleOpenFile()} className="rounded">
+									Open
+								</Button>
+							</DialogFooter>
+						</DialogContent>
+					</DialogPortal>
+				</Dialog>
+			)}
 		</main>
-	);
-}
-
-function Nav({
-	setImageFile,
-	handleDownload,
-}: {
-	setImageFile: (value: File | null) => void;
-	handleDownload: () => void;
-}) {
-	return (
-		<nav className="flex flex-row gap-4 min-h-[4%] items-center pl-8 bg-zinc-950 shadow-[0px_20px_68px_37px_#101012]">
-			<Image
-				src="/prototype-logo.png"
-				width={30}
-				height={30}
-				alt="Logo Icon"
-				className="mr-8"
-				priority
-			></Image>
-			<Menubar className="bg-zinc-950 border-none text-white active:bg-zinc-200">
-				<MenubarMenu>
-					<MenubarTrigger>File</MenubarTrigger>
-					<MenubarContent className="bg-zinc-950 border-none text-white">
-						<MenubarItem onClick={() => setImageFile(null)}>
-							New File
-						</MenubarItem>
-						<MenubarSeparator className="bg-zinc-800" />
-						<MenubarItem onClick={handleDownload}>Download</MenubarItem>
-					</MenubarContent>
-				</MenubarMenu>
-				<MenubarMenu>
-					<MenubarTrigger>Account</MenubarTrigger>
-					<MenubarContent className="bg-zinc-950 border-none text-white">
-						<MenubarItem>Coming Soon...</MenubarItem>
-					</MenubarContent>
-				</MenubarMenu>
-			</Menubar>
-		</nav>
-	);
-}
-
-interface ToolsProps {
-	adjustments: AdjustmentValues;
-	setAdjustments: React.Dispatch<React.SetStateAction<AdjustmentValues>>;
-	isProcessing: boolean;
-}
-
-function Tools({ setAdjustments, isProcessing }: ToolsProps) {
-	const [sliderValues, setSliderValues] = useState({
-		brightness: 50,
-		exposure: 50,
-		contrast: 50,
-		highlight: 50,
-		shadow: 50,
-		black: 50,
-		white: 50,
-		temperature: 50,
-		tint: 50,
-		vibrance: 50,
-		saturation: 50,
-		grain: 0,
-		vignette: 0,
-		sharpness: 0,
-	});
-
-	const handleSliderChange = (
-		name: keyof AdjustmentValues,
-		value: number[]
-	) => {
-		const newValue = value[0];
-		console.log(name + ": " + newValue);
-		setSliderValues((prev) => ({ ...prev, [name]: newValue }));
-
-		let adjustmentValue: number;
-		switch (name) {
-			case "temperature":
-			case "tint":
-				// Temperature and tint range: -2 to 2
-				adjustmentValue = (newValue - 50) / 25;
-				break;
-			case "vibrance":
-			case "saturation":
-				// Vibrance and saturation range: 0 to 2
-				adjustmentValue = newValue / 50;
-				break;
-			case "exposure":
-				// Reduced range for exposure: -1 to 1
-				adjustmentValue = (newValue / 50 - 1) * 1;
-				break;
-			case "brightness":
-				// Brightness range: 0 to 2
-				adjustmentValue = newValue / 50;
-				break;
-			case "contrast":
-				// Contrast range: 0.5 to 1.5
-				adjustmentValue = newValue / 50;
-				break;
-			case "shadow":
-			case "black":
-				// Shadows and blacks range: -0.5 to 0.5
-				adjustmentValue = (newValue - 50) / 100;
-				break;
-			case "highlight":
-			case "white":
-				// Highlights and whites range: -0.5 to 0.5
-				adjustmentValue = (newValue - 50) / 100;
-				break;
-			case "grain":
-			case "vignette":
-			case "sharpness":
-				// Effects range: 0 to 1
-				adjustmentValue = newValue / 100;
-				break;
-			default:
-				adjustmentValue = newValue / 50;
-		}
-
-		setAdjustments((prev) => ({
-			...prev,
-			[name]: adjustmentValue,
-		}));
-	};
-
-	return (
-		<aside className="w-[100%] md:w-[20%] md:h-screen bg-zinc-950">
-			<Separator orientation="horizontal" className="bg-zinc-800" />
-			<ScrollArea className="h-full">
-				<Tabs defaultValue="dark" className="w-full bg-zinc-950">
-					<TabsList className="w-full bg-zinc-950">
-						<TabsTrigger value="light">Light</TabsTrigger>
-						<TabsTrigger value="color">Color</TabsTrigger>
-						<TabsTrigger value="effects">Effects</TabsTrigger>
-					</TabsList>
-					<TabsContent value="light" className="p-4">
-						{[
-							{ name: "exposure", label: "Exposure" },
-							{ name: "brightness", label: "Brightness" },
-							{ name: "contrast", label: "Contrast" },
-							{ name: "highlight", label: "Highlights" },
-							{ name: "shadow", label: "Shadows" },
-							{ name: "black", label: "Blacks" },
-							{ name: "white", label: "Whites" },
-						].map(({ name, label }) => (
-							<SliderControl
-								key={name}
-								name={name as keyof AdjustmentValues}
-								label={label}
-								value={sliderValues[name as keyof typeof sliderValues]}
-								onChange={handleSliderChange}
-								disabled={isProcessing}
-							/>
-						))}
-					</TabsContent>
-					<TabsContent value="color" className="p-4">
-						{[
-							{ name: "temperature", label: "Temperature" },
-							{ name: "tint", label: "Tint" },
-							{ name: "vibrance", label: "Vibrance" },
-							{ name: "saturation", label: "Saturation" },
-						].map(({ name, label }) => (
-							<SliderControl
-								key={name}
-								name={name as keyof AdjustmentValues}
-								label={label}
-								value={sliderValues[name as keyof typeof sliderValues]}
-								onChange={handleSliderChange}
-								disabled={isProcessing}
-							/>
-						))}
-					</TabsContent>
-					<TabsContent value="effects" className="p-4">
-						{[
-							{ name: "sharpness", label: "Sharpness" },
-							{ name: "grain", label: "Grain" },
-							{ name: "vignette", label: "Vignette" },
-						].map(({ name, label }) => (
-							<SliderControl
-								key={name}
-								name={name as keyof AdjustmentValues}
-								label={label}
-								value={sliderValues[name as keyof typeof sliderValues]}
-								onChange={handleSliderChange}
-								disabled={isProcessing}
-							/>
-						))}
-					</TabsContent>
-				</Tabs>
-			</ScrollArea>
-		</aside>
-	);
-}
-
-interface SliderControlProps {
-	name: keyof AdjustmentValues;
-	label: string;
-	value: number;
-	onChange: (name: keyof AdjustmentValues, value: number[]) => void;
-	disabled: boolean;
-}
-
-function SliderControl({
-	name,
-	label,
-	value,
-	onChange,
-	disabled,
-}: SliderControlProps) {
-	return (
-		<div className="flex flex-col gap-4 mb-8">
-			<div className="flex flex-row justify-between">
-				<label className={`${headerBold.className} text-2xl text-white`}>
-					{label}
-				</label>
-				<p className={`${headerBold.className} text-2xl text-white`}>
-					{name === "grain" || name === "vignette" || name === "sharpness"
-						? Math.round(value)
-						: name === "temperature" || name === "tint"
-						? value - 50
-						: ((value * 2 - 100) / 100).toFixed(2)}
-				</p>
-			</div>
-			<Slider
-				defaultValue={[50]}
-				min={0}
-				max={100}
-				step={1}
-				value={[value]}
-				onValueChange={(e) => onChange(name, e)}
-				disabled={disabled}
-			/>
-		</div>
 	);
 }

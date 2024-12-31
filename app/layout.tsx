@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./styles/globals.css";
+import { Toaster, toast } from "sonner";
 
 const geistSans = localFont({
-	src: "./fonts/GeistVF.woff",
-	variable: "--font-geist-sans",
-	weight: "100 900",
+	src: "../public/fonts/PPNeueBit-Bold.otf",
 });
 const geistMono = localFont({
-	src: "./fonts/GeistMonoVF.woff",
-	variable: "--font-geist-mono",
-	weight: "100 900",
+	src: "../public/fonts/PPNeueBit-Bold.otf",
 });
 
 export const metadata: Metadata = {
@@ -25,10 +22,9 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body
-				className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-950`}
-			>
+			<body className={`${geistSans} ${geistMono} antialiased bg-zinc-950`}>
 				{children}
+				<Toaster />
 			</body>
 		</html>
 	);
