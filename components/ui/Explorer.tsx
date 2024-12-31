@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
+import { TopLevelUserObject, UserDirectory } from "@/interfaces/UserObject";
 
 interface DialogState {
 	isOpen: boolean;
@@ -44,11 +45,11 @@ export default function Explorer({
 	setExplorerData,
 	moveItemExplorerData,
 }: {
-	explorerData: any;
-	setExplorerData: any;
-	moveItemExplorerData: any;
+	explorerData: UserDirectory;
+	setExplorerData: (arg0: TopLevelUserObject) => void;
+	moveItemExplorerData: UserDirectory;
 }) {
-	const [expand, setExpand] = useState(false);
+	const [expand, setExpand] = useState<boolean>(false);
 	const [moveItemObjId, setMoveItemObjId] = useState("");
 	const [moveItemDestination, setMoveItemDestination] = useState("");
 	const [moveFileDialogOpen, setMoveFileDialogOpen] = useState(false);
@@ -99,7 +100,6 @@ export default function Explorer({
 							<p>{explorerData.name}</p>
 						</div>
 						<div className="flex gap-4">
-							<p>{explorerData.createdAt}</p>
 							<ExplorerFolderOptions
 								explorerData={explorerData}
 								setExplorerData={setExplorerData}
@@ -109,14 +109,16 @@ export default function Explorer({
 						</div>
 					</div>
 					<div style={expand ? { display: "block" } : { display: "none" }}>
-						{explorerData.objChildren.toReversed().map((item: any) => (
-							<Explorer
-								moveItemExplorerData={moveItemExplorerData}
-								explorerData={item}
-								key={item.objId}
-								setExplorerData={setExplorerData}
-							/>
-						))}
+						{[...explorerData.objChildren]
+							.reverse()
+							.map((item: UserDirectory) => (
+								<Explorer
+									moveItemExplorerData={moveItemExplorerData}
+									explorerData={item}
+									key={item.objId}
+									setExplorerData={setExplorerData}
+								/>
+							))}
 					</div>
 				</div>
 			) : (
@@ -183,19 +185,20 @@ function ExplorerFolderOptions({
 	setExpand,
 	handleOpenMoveItemDialog,
 }: {
-	explorerData: any;
-	setExplorerData: any;
-	setExpand: any;
-	handleOpenMoveItemDialog: any;
+	explorerData: UserDirectory;
+	setExplorerData: (arg0: TopLevelUserObject) => void;
+	setExpand: (arg0: boolean) => void;
+	handleOpenMoveItemDialog: (objId: string) => void;
 }) {
 	const [dialogState, setDialogState] = useState<DialogState>({
 		isOpen: false,
 		type: null,
 	});
-	const [createFolderInputValue, setCreateFolderInputValue] = useState("");
+	const [createFolderInputValue, setCreateFolderInputValue] =
+		useState<string>("");
 	const [renameInputValue, setRenameInputValue] = useState(explorerData.name);
 	const [addFileNameInputValue, setAddFileNameInputValue] = useState("");
-	const [addFileContent, setAddFileContent] = useState<any | null>("");
+	const [addFileContent, setAddFileContent] = useState<any | null>(""); // eslint-disable-line
 
 	const closeDialog = () => {
 		setDialogState({ isOpen: false, type: null });
@@ -213,7 +216,7 @@ function ExplorerFolderOptions({
 		try {
 			const response = await createFolder(
 				createFolderInputValue,
-				explorerData.objId
+				explorerData.objId || ""
 			);
 			if (response) {
 				setExplorerData(response);
@@ -227,6 +230,7 @@ function ExplorerFolderOptions({
 			toast("Error", {
 				description: "Error creating folder",
 			});
+			console.log(error);
 		} finally {
 			closeDialog();
 			setExpand(true);
@@ -239,7 +243,7 @@ function ExplorerFolderOptions({
 			const response = await addFile(
 				uuid,
 				addFileNameInputValue,
-				explorerData.objId
+				explorerData.objId || ""
 			);
 			if (response) {
 				setExplorerData(response);
@@ -257,6 +261,7 @@ function ExplorerFolderOptions({
 			toast("Error", {
 				description: "Error adding file",
 			});
+			console.log(error);
 		} finally {
 			closeDialog();
 			setExpand(true);
@@ -265,7 +270,10 @@ function ExplorerFolderOptions({
 
 	const handleRename = async () => {
 		try {
-			const response = await renameFile(renameInputValue, explorerData.objId);
+			const response = await renameFile(
+				renameInputValue,
+				explorerData.objId || ""
+			);
 			if (response) {
 				setExplorerData(response);
 				toast("Success", {
@@ -276,8 +284,9 @@ function ExplorerFolderOptions({
 			}
 		} catch (error) {
 			toast("Error", {
-				description: "Error renaming item",
+				description: "Error renaming item:",
 			});
+			console.log(error);
 		} finally {
 			closeDialog();
 		}
@@ -298,6 +307,7 @@ function ExplorerFolderOptions({
 			toast("Error", {
 				description: "Error deleting item",
 			});
+			console.log(error);
 		} finally {
 			closeDialog();
 		}
@@ -472,7 +482,9 @@ function ExplorerFolderOptions({
 						{explorerData.objId !== "root" && (
 							<>
 								<DropdownMenuItem
-									onClick={() => handleOpenMoveItemDialog(explorerData.objId)}
+									onClick={() =>
+										handleOpenMoveItemDialog(explorerData.objId || "")
+									}
 								>
 									<ArrowDownUp className="mr-2" />
 									<span>Move</span>
@@ -509,9 +521,9 @@ function ExplorerFileOptions({
 	setExplorerData,
 	handleOpenMoveItemDialog,
 }: {
-	explorerData: any;
-	setExplorerData: any;
-	handleOpenMoveItemDialog: any;
+	explorerData: UserDirectory;
+	setExplorerData: (arg0: TopLevelUserObject) => void;
+	handleOpenMoveItemDialog: (objId: string) => void;
 }) {
 	const [dialogState, setDialogState] = useState<DialogState>({
 		isOpen: false,
@@ -559,6 +571,7 @@ function ExplorerFileOptions({
 			toast("Error", {
 				description: "Error deleting file",
 			});
+			console.log(error);
 		} finally {
 			closeDialog();
 		}
@@ -566,7 +579,10 @@ function ExplorerFileOptions({
 
 	const handleRename = async () => {
 		try {
-			const response = await renameFile(renameInputValue, explorerData.objId);
+			const response = await renameFile(
+				renameInputValue,
+				explorerData.objId || ""
+			);
 			if (response) {
 				setExplorerData(response);
 				toast("Success", {
@@ -579,6 +595,7 @@ function ExplorerFileOptions({
 			toast("Error", {
 				description: "Error renaming file",
 			});
+			console.log(error);
 		} finally {
 			closeDialog();
 		}
@@ -663,7 +680,9 @@ function ExplorerFileOptions({
 					<DropdownMenuLabel>Options</DropdownMenuLabel>
 					<DropdownMenuSeparator />
 					<DropdownMenuGroup>
-						<DropdownMenuItem onClick={() => handleGetFile(explorerData.objId)}>
+						<DropdownMenuItem
+							onClick={() => handleGetFile(explorerData.objId || "")}
+						>
 							<Eye className="mr-2" />
 							<span>Preview</span>
 						</DropdownMenuItem>
@@ -672,7 +691,7 @@ function ExplorerFileOptions({
 							<span>Rename</span>
 						</DropdownMenuItem>
 						<DropdownMenuItem
-							onClick={() => handleOpenMoveItemDialog(explorerData.objId)}
+							onClick={() => handleOpenMoveItemDialog(explorerData.objId || "")}
 						>
 							<ArrowDownUp className="mr-2" />
 							<span>Move</span>
@@ -709,7 +728,7 @@ function MoveItemExplorer({
 }: {
 	moveItemDestination: string;
 	setMoveItemDestination: (id: string) => void;
-	moveItemExplorerData: any;
+	moveItemExplorerData: UserDirectory;
 }) {
 	const [expand, setExpand] = useState(false);
 
@@ -724,7 +743,7 @@ function MoveItemExplorer({
 					}`}
 					onClick={() => {
 						setExpand((prev) => !prev);
-						setMoveItemDestination(moveItemExplorerData.objId);
+						setMoveItemDestination(moveItemExplorerData.objId || "");
 					}}
 				>
 					<div className="flex gap-4 w-full ml-4">
@@ -738,7 +757,7 @@ function MoveItemExplorer({
 					</div>
 				</div>
 				<div style={expand ? { display: "block" } : { display: "none" }}>
-					{moveItemExplorerData?.objChildren?.map((item: any) => (
+					{moveItemExplorerData?.objChildren?.map((item: UserDirectory) => (
 						<MoveItemExplorer
 							key={item.objId}
 							moveItemDestination={moveItemDestination}

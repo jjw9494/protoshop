@@ -21,7 +21,10 @@ export default function Tools({
 	) => {
 		const newValue = value[0];
 		console.log(name + ": " + newValue);
-		setSliderValues((prev: any) => ({ ...prev, [name]: newValue }));
+		setSliderValues((prev: AdjustmentValues) => ({
+			...prev,
+			[name]: newValue,
+		}));
 
 		let adjustmentValue: number;
 		switch (name) {
@@ -67,7 +70,7 @@ export default function Tools({
 				adjustmentValue = newValue / 50;
 		}
 
-		setAdjustments((prev: any) => ({
+		setAdjustments((prev: AdjustmentValues) => ({
 			...prev,
 			[name]: adjustmentValue,
 		}));

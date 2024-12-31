@@ -1,14 +1,15 @@
 import { useState } from "react";
 import Image from "next/image";
+import { UserDirectory } from "@/interfaces/UserObject";
 
 export default function OpenMenu({
 	explorerData,
 	openItemDestination,
 	setOpenItemDestination,
 }: {
-	explorerData: any;
-	openItemDestination: any;
-	setOpenItemDestination: any;
+	explorerData: UserDirectory | undefined;
+	openItemDestination: string | undefined;
+	setOpenItemDestination: (arg0: string | undefined) => void;
 }) {
 	const [expand, setExpand] = useState(false);
 
@@ -31,30 +32,29 @@ export default function OpenMenu({
 							/>
 							<p>{explorerData.name}</p>
 						</div>
-						<div className="flex gap-4">
-							<p>{explorerData.createdAt}</p>
-						</div>
 					</div>
 					<div style={expand ? { display: "block" } : { display: "none" }}>
-						{explorerData.objChildren.toReversed().map((item: any) => (
-							<OpenMenu
-								explorerData={item}
-								key={item.objId}
-								openItemDestination={openItemDestination}
-								setOpenItemDestination={setOpenItemDestination}
-							/>
-						))}
+						{[...explorerData.objChildren]
+							.reverse()
+							.map((item: UserDirectory) => (
+								<OpenMenu
+									explorerData={item}
+									key={item.objId}
+									openItemDestination={openItemDestination}
+									setOpenItemDestination={setOpenItemDestination}
+								/>
+							))}
 					</div>
 				</div>
 			) : (
 				<div
 					className={`p-4 flex w-full justify-between hover:cursor-pointer hover:bg-zinc-800 rounded-xl ${
-						openItemDestination === explorerData.objId ? "bg-zinc-900" : ""
+						openItemDestination === explorerData?.objId ? "bg-zinc-900" : ""
 					}`}
 				>
 					<div
 						className="flex pl-4 gap-4 ml-4"
-						onClick={() => setOpenItemDestination(explorerData.objId)}
+						onClick={() => setOpenItemDestination(explorerData?.objId)}
 					>
 						<Image
 							src="/file-icon.png"
@@ -62,7 +62,7 @@ export default function OpenMenu({
 							width={25}
 							alt="file icon"
 						/>
-						<p>{explorerData.name}</p>
+						<p>{explorerData?.name}</p>
 					</div>
 				</div>
 			)}

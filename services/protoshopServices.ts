@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 export async function generateAccessToken(authCode: string | null) {
 	if (!authCode) {
 		console.error("No authCode provided");
@@ -7,7 +9,7 @@ export async function generateAccessToken(authCode: string | null) {
 	}
 
 	try {
-		let response = await fetch(`http://localhost:5169/login/${authCode}`, {
+		let response = await fetch(backendUrl + `/login/${authCode}`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -29,7 +31,7 @@ export async function generateAccessToken(authCode: string | null) {
 
 export async function getUserObject() {
 	try {
-		let response = await fetch(`http://localhost:5169/UserObject`, {
+		let response = await fetch(backendUrl + `/UserObject`, {
 			method: "GET",
 			headers: {
 				"Content-Type": "application/json",
@@ -52,17 +54,14 @@ export async function getUserObject() {
 
 export async function createFolder(newFolderName: any, parentId: string) {
 	try {
-		let response = await fetch(
-			`http://localhost:5169/CreateFolder/${parentId}`,
-			{
-				method: "POST",
-				body: JSON.stringify({ name: `${newFolderName}` }),
-				headers: {
-					"Content-Type": "application/json",
-				},
-				credentials: "include",
-			}
-		);
+		let response = await fetch(backendUrl + `/CreateFolder/${parentId}`, {
+			method: "POST",
+			body: JSON.stringify({ name: `${newFolderName}` }),
+			headers: {
+				"Content-Type": "application/json",
+			},
+			credentials: "include",
+		});
 
 		if (!response.ok) {
 			console.error(`Server error: ${response.statusText}`);
@@ -82,7 +81,7 @@ export async function addFile(
 	parentId: string
 ) {
 	try {
-		let response = await fetch(`http://localhost:5169/AddFile/${parentId}`, {
+		let response = await fetch(backendUrl + `/AddFile/${parentId}`, {
 			method: "POST",
 			body: JSON.stringify({
 				objId: objId,
@@ -108,7 +107,7 @@ export async function addFile(
 
 export async function getFile(objId: string) {
 	try {
-		let response = await fetch("http://localhost:5169/GetFile", {
+		let response = await fetch(backendUrl + "/GetFile", {
 			method: "POST",
 			body: JSON.stringify({
 				objId: `${objId}`,
@@ -134,7 +133,7 @@ export async function getFile(objId: string) {
 
 export async function getFileContent(objId: string) {
 	try {
-		let response = await fetch("http://localhost:5169/GetFileContent", {
+		let response = await fetch(backendUrl + "/GetFileContent", {
 			method: "POST",
 			body: JSON.stringify({
 				objId: `${objId}`,
@@ -159,7 +158,7 @@ export async function getFileContent(objId: string) {
 
 export async function addS3File(formData: FormData) {
 	try {
-		let response = await fetch(`http://localhost:5169/AddS3File`, {
+		let response = await fetch(backendUrl + `/AddS3File`, {
 			method: "POST",
 			body: formData,
 			credentials: "include",
@@ -179,17 +178,14 @@ export async function addS3File(formData: FormData) {
 
 export async function renameFile(newName: any, objToRenameId: string) {
 	try {
-		let response = await fetch(
-			`http://localhost:5169/RenameItem/${objToRenameId}`,
-			{
-				method: "POST",
-				body: JSON.stringify({ name: `${newName}` }),
-				headers: {
-					"Content-Type": "application/json",
-				},
-				credentials: "include",
-			}
-		);
+		let response = await fetch(backendUrl + `/RenameItem/${objToRenameId}`, {
+			method: "POST",
+			body: JSON.stringify({ name: `${newName}` }),
+			headers: {
+				"Content-Type": "application/json",
+			},
+			credentials: "include",
+		});
 
 		if (!response.ok) {
 			console.error(`Server error: ${response.statusText}`);
@@ -205,7 +201,7 @@ export async function renameFile(newName: any, objToRenameId: string) {
 
 export async function deleteFile(file: any) {
 	try {
-		let response = await fetch(`http://localhost:5169/Delete/${file.objId}`, {
+		let response = await fetch(backendUrl + `/Delete/${file.objId}`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -227,7 +223,7 @@ export async function deleteFile(file: any) {
 
 export async function moveFile(objId: string, destinationId: string) {
 	try {
-		let response = await fetch(`http://localhost:5169/MoveItem`, {
+		let response = await fetch(backendUrl + `/MoveItem`, {
 			method: "POST",
 			body: JSON.stringify({
 				objId: `${objId}`,
@@ -276,7 +272,7 @@ export async function signOut() {
 	}
 
 	try {
-		let response = await fetch(`http://localhost:5169/SignOut`, {
+		let response = await fetch(backendUrl + `/SignOut`, {
 			method: "GET",
 			headers: {
 				"Content-Type": "application/json",

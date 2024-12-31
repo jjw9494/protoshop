@@ -10,10 +10,8 @@ import Link from "next/link";
 import { signOut } from "@/services/protoshopServices";
 
 export default function Nav({
-	setImageFile,
 	handleDownload,
 	loggedIn,
-	username,
 	setSaveMenuOpen,
 	setOpenMenuOpen,
 	handleSaveFile,

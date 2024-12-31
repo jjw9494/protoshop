@@ -12,18 +12,13 @@ import {
 import localFont from "next/font/local";
 import Link from "next/link";
 import { signOut } from "@/services/protoshopServices";
-import { redirect } from "next/dist/server/api-utils";
 import { Separator } from "./separator";
 
-const raderFont = localFont({
+const PPNeubitFont = localFont({
 	src: "../../public/fonts/PPNeueBit-Bold.otf",
 });
 
-const raderFontItalic = localFont({
-	src: "../../public/fonts/PPNeueBit-Bold.otf",
-});
-
-export default function Nav({ username }: { username: any }) {
+export default function Nav({ username }: { username: string }) {
 	return (
 		<div>
 			<nav className="flex h-[70px] w-screen bg-zinc-950 shadow-[0px_20px_68px_37px_#101012] justify-between items-center px-[220px]">
@@ -37,13 +32,13 @@ export default function Nav({ username }: { username: any }) {
 							className="mr-8"
 							priority
 						></Image>
-						<h2 className={`text-4xl ${raderFont.className}`}>Protoshop.</h2>
+						<h2 className={`text-4xl ${PPNeubitFont.className}`}>Protoshop.</h2>
 					</div>
 				</Link>
 				<div className="flex h-full items-center justify-center gap-8 pr-4">
 					{username && (
 						<div
-							className={`content-center text-2xl ${raderFontItalic.className}`}
+							className={`content-center text-2xl ${PPNeubitFont.className}`}
 						>
 							Hello {username}
 						</div>

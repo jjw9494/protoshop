@@ -1,7 +1,7 @@
 "use client";
 import { Separator } from "@/components/ui/separator";
 import { CustomFileInput } from "./custom-hooks/CustomFileInput";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, Suspense } from "react";
 import {
 	generateHistogram,
 	adjustBlacks,
@@ -19,7 +19,6 @@ import {
 	adjustVignette,
 	adjustSharpness,
 } from "../wasm_functions/function_wrappers";
-import localFont from "next/font/local";
 import { debounce } from "lodash";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -49,10 +48,7 @@ import {
 import Tools from "@/components/ui/Tools";
 import SaveMenu from "@/components/ui/SaveMenu";
 import OpenMenu from "@/components/ui/OpenMenu";
-
-const headerBold = localFont({
-	src: "../public/fonts/PPNeueBit-Bold.otf",
-});
+import { UserDirectory } from "@/interfaces/UserObject";
 
 const defaultAdjustments: AdjustmentValues = {
 	brightness: 1,
@@ -88,6 +84,33 @@ const defaultSliderValues: AdjustmentValues = {
 	sharpness: 0,
 };
 
+function AuthenticationHandler({
+	setLoggedIn,
+	setUsername,
+	setExplorerData,
+}: {
+	setLoggedIn: (arg0: boolean) => void;
+	setUsername: (arg0: string) => void;
+	setExplorerData: (arg0: UserDirectory) => void;
+}) {
+	const searchParams = useSearchParams();
+
+	useEffect(() => {
+		const authCode = searchParams.get("code");
+		const getData = async () => {
+			const response = await generateAccessToken(authCode);
+			if (response) {
+				setLoggedIn(true);
+				setUsername(response.username);
+				setExplorerData(response.directory[0]);
+			}
+		};
+		getData();
+	}, [searchParams, setLoggedIn, setUsername, setExplorerData]);
+
+	return null;
+}
+
 export default function Home() {
 	const [loggedIn, setLoggedIn] = useState(false);
 	const [username, setUsername] = useState<string>();
@@ -101,30 +124,13 @@ export default function Home() {
 		null
 	);
 
-	const [explorerData, setExplorerData] = useState<any>();
-
-	const [openItemDestination, setOpenItemDestination] = useState();
+	const [explorerData, setExplorerData] = useState<UserDirectory | undefined>();
+	const [openItemDestination, setOpenItemDestination] = useState<string>();
 	const [openMenuOpen, setOpenMenuOpen] = useState(false);
 
 	const [saveMenuOpen, setSaveMenuOpen] = useState(false);
-	const [saveItemDestination, setSaveItemDestination] = useState();
-	const [saveItemTextInput, setSaveItemTextInput] = useState();
-	const searchParams = useSearchParams();
-
-	// Login and get user information
-	useEffect(() => {
-		const authCode = searchParams.get("code");
-		const getData = async () => {
-			const response = await generateAccessToken(authCode);
-			if (response) {
-				console.log(response);
-				setLoggedIn(true);
-				setUsername(response.username);
-				setExplorerData(response.directory[0]);
-			}
-		};
-		getData();
-	}, [searchParams]);
+	const [saveItemDestination, setSaveItemDestination] = useState<string>();
+	const [saveItemTextInput, setSaveItemTextInput] = useState<string>();
 
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const originalImageData = useRef<ImageData | null>(null);
@@ -324,13 +330,15 @@ export default function Home() {
 		if (!canvasRef.current) return;
 
 		const fileInfo = explorerData?.objChildren?.find(
-			(child: any) => child.objId === openItemDestination
+			(child: UserDirectory) => child.objId === openItemDestination
 		);
 
-		const link = document.createElement("a");
-		link.download = fileInfo.name;
-		link.href = canvasRef.current.toDataURL();
-		link.click();
+		if (fileInfo) {
+			const link = document.createElement("a");
+			link.download = fileInfo.name || "";
+			link.href = canvasRef.current.toDataURL();
+			link.click();
+		}
 	};
 
 	const handleClearFile = () => {
@@ -366,7 +374,7 @@ export default function Home() {
 		try {
 			// Find the current file info from explorer data
 			const fileInfo = explorerData?.objChildren?.find(
-				(child: any) => child.objId === openItemDestination
+				(child: UserDirectory) => child.objId === openItemDestination
 			);
 
 			if (!fileInfo) {
@@ -379,7 +387,7 @@ export default function Home() {
 			// Convert canvas to File object
 			const fileToUpload = await canvasToFile(
 				canvasRef.current,
-				fileInfo.name,
+				fileInfo.name || "",
 				fileExtension
 			);
 
@@ -420,7 +428,7 @@ export default function Home() {
 
 			// Create a File object from the blob
 			const fileInfo = explorerData?.objChildren?.find(
-				(child: any) => child.objId === openItemDestination
+				(child: UserDirectory) => child.objId === openItemDestination
 			);
 			const filename = fileInfo?.name || "opened-file.png";
 
@@ -542,6 +550,13 @@ export default function Home() {
 
 	return (
 		<main className="md:h-screen h-full w-screen flex flex-col md:flex-row bg-zinc-900 md:overflow-y-hidden">
+			<Suspense fallback={<div>Loading...</div>}>
+				<AuthenticationHandler
+					setLoggedIn={setLoggedIn}
+					setUsername={setUsername}
+					setExplorerData={setExplorerData}
+				/>
+			</Suspense>
 			<div className="flex flex-col w-[100%] md:w-[80%] h-full md:h-screen">
 				<Nav
 					setImageFile={setImageFile}
@@ -636,7 +651,9 @@ export default function Home() {
 									placeholder="File Name"
 									className="w-[100%] self-start rounded  bg-zinc-800"
 									value={saveItemTextInput}
-									onChange={(e: any) => setSaveItemTextInput(e.target.value)}
+									onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+										setSaveItemTextInput(e.target.value)
+									}
 								></Input>
 								<Button
 									variant="outline"

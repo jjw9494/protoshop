@@ -5,16 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import localFont from "next/font/local";
 
-const raderFont = localFont({
-	src: "../../public/fonts/PPNeueBit-Bold.otf",
-});
-
-const raderFontItalic = localFont({
+const PPNeuBitFont = localFont({
 	src: "../../public/fonts/PPNeueBit-Bold.otf",
 });
 
 export default function AccountSettings() {
-	let username = "admin";
+	const username = "admin";
 
 	return (
 		<main className="flex min-h-screen flex-col bg-zinc-900">
@@ -27,7 +23,7 @@ export default function AccountSettings() {
 				></Separator>
 				<div className="w-full m-4 flex flex-col gap-8 items-center justify-center mt-[-300px]">
 					<div className="flex flex-col gap-8">
-						<h2 className={`text-4xl ${raderFontItalic.className}`}>
+						<h2 className={`text-4xl ${PPNeuBitFont.className}`}>
 							Update Password
 						</h2>
 						<div className="grid w-full max-w-sm items-center gap-1.5">
@@ -52,7 +48,7 @@ export default function AccountSettings() {
 					</div>
 					<Separator orientation="horizontal" className="w-1/2"></Separator>
 					<div className="flex flex-col gap-8">
-						<h2 className={`text-4xl ${raderFontItalic.className}`}>
+						<h2 className={`text-4xl ${PPNeuBitFont.className}`}>
 							Delete Account
 						</h2>
 

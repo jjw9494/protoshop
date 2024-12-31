@@ -1,14 +1,15 @@
 import { useState } from "react";
 import Image from "next/image";
+import { UserDirectory } from "@/interfaces/UserObject";
 
 export default function SaveMenu({
 	explorerData,
 	saveItemDestination,
 	setSaveItemDestination,
 }: {
-	explorerData: any;
-	saveItemDestination: any;
-	setSaveItemDestination: any;
+	explorerData: UserDirectory | undefined;
+	saveItemDestination: string | undefined;
+	setSaveItemDestination: (arg0: string | undefined) => void;
 }) {
 	const [expand, setExpand] = useState(false);
 
@@ -34,19 +35,18 @@ export default function SaveMenu({
 							/>
 							<p>{explorerData.name}</p>
 						</div>
-						<div className="flex gap-4">
-							<p>{explorerData.createdAt}</p>
-						</div>
 					</div>
 					<div style={expand ? { display: "block" } : { display: "none" }}>
-						{explorerData.objChildren.toReversed().map((item: any) => (
-							<SaveMenu
-								explorerData={item}
-								key={item.objId}
-								saveItemDestination={saveItemDestination}
-								setSaveItemDestination={setSaveItemDestination}
-							/>
-						))}
+						{[...explorerData.objChildren]
+							.reverse()
+							.map((item: UserDirectory) => (
+								<SaveMenu
+									explorerData={item}
+									key={item.objId}
+									saveItemDestination={saveItemDestination}
+									setSaveItemDestination={setSaveItemDestination}
+								/>
+							))}
 					</div>
 				</div>
 			)}

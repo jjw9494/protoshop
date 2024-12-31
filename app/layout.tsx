@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./styles/globals.css";
-import { Toaster, toast } from "sonner";
+import { Toaster } from "sonner";
 
-const geistSans = localFont({
-	src: "../public/fonts/PPNeueBit-Bold.otf",
-});
-const geistMono = localFont({
+const PPNeubitFont = localFont({
 	src: "../public/fonts/PPNeueBit-Bold.otf",
 });
 
@@ -22,7 +19,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body className={`${geistSans} ${geistMono} antialiased bg-zinc-950`}>
+			<body className={`${PPNeubitFont} ${PPNeubitFont} antialiased bg-zinc-950`}>
 				{children}
 				<Toaster />
 			</body>

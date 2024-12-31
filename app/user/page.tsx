@@ -1,19 +1,16 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { Suspense, useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-	generateAccessToken,
-	getUserObject,
-} from "@/services/protoshopServices";
+import { getUserObject } from "@/services/protoshopServices";
 import Explorer from "@/components/ui/Explorer";
 import Nav from "@/components/ui/FilesNav";
+import { TopLevelUserObject } from "@/interfaces/UserObject";
 
 export default function User() {
-	const [explorerData, setExplorerData] = useState<any>();
-	const [username, setUsername] = useState<string>();
+	const [explorerData, setExplorerData] = useState<TopLevelUserObject>();
+	const [username, setUsername] = useState<string>("");
 
 	useEffect(() => {
 		const getData = async () => {
@@ -46,8 +43,8 @@ export default function User() {
 						{/* Add pointer-events-auto */}
 						{explorerData ? (
 							<Explorer
-								moveItemExplorerData={explorerData.directory[0]}
-								explorerData={explorerData.directory[0]}
+								moveItemExplorerData={explorerData?.directory[0]}
+								explorerData={explorerData?.directory[0]}
 								setExplorerData={setExplorerData}
 							></Explorer>
 						) : (
