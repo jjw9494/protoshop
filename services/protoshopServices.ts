@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+const cognitoLogoutUrl = process.env.NEXT_PUBLIC_COGNITO_LOGOUT_URL;
 
 export async function generateAccessToken(authCode: string | null) {
 	if (!authCode) {
@@ -248,11 +249,10 @@ export async function moveFile(objId: string, destinationId: string) {
 }
 
 export async function signOut() {
-	const url =
-		"https://us-east-1fzoyjj6v8.auth.us-east-1.amazoncognito.com/logout?client_id=42ofhk29neqi1c714b9n7ncvi5&redirect_uri=https%3A%2F%2Fprotoshop.vercel.app%2F";
+	const url = cognitoLogoutUrl;
 
 	try {
-		let response = await fetch(url, {
+		let response = await fetch(`${url}`, {
 			method: "GET",
 			headers: {
 				"Content-Type": "application/json",

@@ -26,6 +26,7 @@ export default function Nav({
 	handleSaveFile: () => void;
 	handleClearFile: () => void;
 }) {
+	const cognitoLoginUrl = process.env.NEXT_PUBLIC_COGNITO_LOGIN_URL;
 	return (
 		<nav className="flex flex-row gap-4 min-h-[4%] w-full items-center justify-between pl-8 bg-zinc-950 shadow-[0px_20px_68px_37px_#101012]">
 			<div className="flex flex-row">
@@ -72,9 +73,8 @@ export default function Nav({
 						) : (
 							<MenubarContent className="bg-zinc-950 border-none text-white">
 								<MenubarItem asChild>
-									<a href="https://us-east-1fzoyjj6v8.auth.us-east-1.amazoncognito.com/login/continue?client_id=42ofhk29neqi1c714b9n7ncvi5&redirect_uri=https%3A%2F%2Fprotoshop.vercel.app%2F&response_type=code&scope=email+openid+phone">
-										Log In
-									</a>
+									{/* <a href=""> */}
+									<a href={cognitoLoginUrl}>Log In</a>
 								</MenubarItem>
 							</MenubarContent>
 						)}
