@@ -36,4 +36,3 @@
             -s "EXPORTED_FUNCTIONS=['_EMSCRIPTEN_MALLOC', '_EMSCRIPTEN_FREE', '_adjustBrightness','_adjustExposureEffect','_adjustContrastEffect','_adjustHighlights','_adjustWhites','_adjustBlacks','_adjustTemperatureEffect', '_adjustTintEffect', '_adjustVibranceEffect', '_adjustSaturationEffect', '_adjustSharpnessEffect', '_generateHistogram', '_adjustShadows', '_addGrain', '_adjustVignetteEffect']" \
             -s ALLOW_MEMORY_GROWTH=1 \
         -O3
-
