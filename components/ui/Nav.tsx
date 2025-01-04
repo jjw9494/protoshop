@@ -41,6 +41,7 @@ export default function Nav({
 				<Menubar className="bg-zinc-950 border-none text-white active:bg-zinc-200">
 					<MenubarMenu>
 						<MenubarTrigger>File</MenubarTrigger>
+						
 						{loggedIn ? (
 							<MenubarContent className="bg-zinc-950 border-none text-white">
 								<MenubarItem onClick={() => handleClearFile()}>
@@ -64,6 +65,7 @@ export default function Nav({
 								<MenubarItem onClick={handleDownload}>Download</MenubarItem>
 							</MenubarContent>
 						)}
+
 					</MenubarMenu>
 					<MenubarMenu>
 						<MenubarTrigger>Account</MenubarTrigger>
