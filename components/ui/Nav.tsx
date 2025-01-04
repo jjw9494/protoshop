@@ -41,19 +41,29 @@ export default function Nav({
 				<Menubar className="bg-zinc-950 border-none text-white active:bg-zinc-200">
 					<MenubarMenu>
 						<MenubarTrigger>File</MenubarTrigger>
-						<MenubarContent className="bg-zinc-950 border-none text-white">
-							<MenubarItem onClick={() => handleClearFile()}>
-								New File
-							</MenubarItem>
-							<MenubarItem onClick={() => handleSaveFile()}>Save</MenubarItem>
-							<MenubarItem onClick={() => setSaveMenuOpen(true)}>
-								Save As
-							</MenubarItem>
-							<MenubarItem onClick={() => setOpenMenuOpen(true)}>
-								Open
-							</MenubarItem>
-							<MenubarItem onClick={handleDownload}>Download</MenubarItem>
-						</MenubarContent>
+						{loggedIn ? (
+							<MenubarContent className="bg-zinc-950 border-none text-white">
+								<MenubarItem onClick={() => handleClearFile()}>
+									New File
+								</MenubarItem>
+
+								<MenubarItem onClick={() => handleSaveFile()}>Save</MenubarItem>
+								<MenubarItem onClick={() => setSaveMenuOpen(true)}>
+									Save As
+								</MenubarItem>
+								<MenubarItem onClick={() => setOpenMenuOpen(true)}>
+									Open
+								</MenubarItem>
+								<MenubarItem onClick={handleDownload}>Download</MenubarItem>
+							</MenubarContent>
+						) : (
+							<MenubarContent className="bg-zinc-950 border-none text-white">
+								<MenubarItem onClick={() => handleClearFile()}>
+									New File
+								</MenubarItem>
+								<MenubarItem onClick={handleDownload}>Download</MenubarItem>
+							</MenubarContent>
+						)}
 					</MenubarMenu>
 					<MenubarMenu>
 						<MenubarTrigger>Account</MenubarTrigger>
