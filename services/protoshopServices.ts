@@ -30,6 +30,7 @@ export async function generateAccessToken(authCode: string | null) {
 	}
 }
 
+
 export async function getUserObject() {
 	try {
 		let response = await fetch(backendUrl + `/UserObject`, {
